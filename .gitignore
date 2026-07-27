@@ -1,0 +1,60 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# IDE and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Airflow
+logs/
+airflow.db
+airflow.cfg
+standalone_admin_password.txt
+
+# Local datasets and processing results
+data/raw/
+data/processed/
+data/rejected/
+*.json
+*.jsonl
+*.parquet
+*.tar
+*.tar.gz
+*.tar.zst
+*.zst
+
+# Spark
+spark-warehouse/
+metastore_db/
+derby.log
+
+# ClickHouse local state
+clickhouse-data/
+clickhouse-logs/
+
+# Power BI binary/local artifacts
+*.pbix
+*.pbit
+
+# Temporary files
+tmp/
+temp/
+*.log
+
+# Small test fixtures are part of the repository
+!tests/fixtures/**/*.json
