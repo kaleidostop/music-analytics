@@ -68,8 +68,8 @@ python src/transform_highlevel.py
 ```
 
 Скрипт использует явную схему, приводит вложенный JSON к плоской таблице,
-проверяет MBID, нормализует вероятности и удаляет дубликаты. Пока результат
-выводится в консоль; запись в ClickHouse будет следующим этапом.
+проверяет MBID, нормализует вероятности и останавливается при обнаружении
+дубликатов. Без `--write-clickhouse` результат только выводится в консоль.
 
 Инструкция полного запуска появится после подготовки Docker Compose и первого сквозного ETL-процесса.
 
@@ -95,6 +95,17 @@ docker compose ps
 ```powershell
 docker compose exec airflow-scheduler `
   python /opt/airflow/src/transform_highlevel.py --limit 10 --show 0
+```
+
+Запись результата в staging ClickHouse:
+
+```powershell
+docker compose exec airflow-scheduler `
+  python /opt/airflow/src/transform_highlevel.py `
+  --limit 100 `
+  --show 0 `
+  --write-clickhouse `
+  --dag-run-id manual-test
 ```
 
 Остановка:

@@ -14,3 +14,12 @@ USER airflow
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir --requirement /tmp/requirements.txt
 
+USER root
+
+RUN mkdir --parents /opt/airflow/jars \
+    && curl --fail --location --silent --show-error \
+      https://repo1.maven.org/maven2/com/clickhouse/clickhouse-jdbc/0.9.8/clickhouse-jdbc-0.9.8-all.jar \
+      --output /opt/airflow/jars/clickhouse-jdbc-0.9.8-all.jar \
+    && chown --recursive airflow:root /opt/airflow/jars
+
+USER airflow

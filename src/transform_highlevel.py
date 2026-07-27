@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
+from uuid import uuid4
 
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
@@ -27,6 +29,7 @@ FILENAME_MBID_PATTERN = (
     r"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
     r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12})-\d+\.json$"
 )
+FILENAME_OFFSET_PATTERN = r"-(\d+)\.json$"
 
 
 def classifier_schema() -> StructType:
@@ -91,14 +94,18 @@ def valid_probability(path: str):
 
 
 def transform_highlevel(raw: DataFrame) -> DataFrame:
-    """Flatten fields selected for ClickHouse and remove invalid MBIDs."""
+    """Flatten fields selected for ClickHouse and keep submission offset zero."""
     mbid_from_filename = F.regexp_extract(
         F.input_file_name(), FILENAME_MBID_PATTERN, 1
     )
+    submission_offset = F.regexp_extract(
+        F.input_file_name(), FILENAME_OFFSET_PATTERN, 1
+    ).cast("int")
     recording_mbid = F.coalesce(first_tag("musicbrainz_recordingid"), mbid_from_filename)
     date = first_tag("date")
 
     transformed = raw.select(
+        submission_offset.alias("_submission_offset"),
         F.lower(recording_mbid).alias("recording_mbid"),
         first_tag("artist").alias("artist"),
         first_tag("title").alias("title"),
@@ -150,9 +157,91 @@ def transform_highlevel(raw: DataFrame) -> DataFrame:
         F.input_file_name().alias("source_file"),
     )
 
-    return (
-        transformed.filter(F.col("recording_mbid").rlike(UUID_PATTERN))
-        .dropDuplicates(["recording_mbid"])
+    return transformed.filter(F.col("_submission_offset") == 0).drop(
+        "_submission_offset"
+    )
+
+
+def validate_transformed(transformed: DataFrame) -> int:
+    """Fail visibly instead of silently filtering invalid or duplicate records."""
+    row_count = transformed.count()
+    if row_count == 0:
+        raise ValueError("Transformation produced no records")
+
+    invalid_mbid_count = transformed.filter(
+        ~F.col("recording_mbid").rlike(UUID_PATTERN)
+        | F.col("recording_mbid").isNull()
+    ).count()
+    if invalid_mbid_count:
+        raise ValueError(f"Found {invalid_mbid_count} records with invalid MBID")
+
+    duplicate_count = (
+        transformed.groupBy("recording_mbid")
+        .count()
+        .filter(F.col("count") > 1)
+        .count()
+    )
+    if duplicate_count:
+        raise ValueError(f"Found {duplicate_count} duplicate recording MBIDs")
+
+    return row_count
+
+
+def write_to_clickhouse(
+    transformed: DataFrame,
+    *,
+    dag_run_id: str,
+    jdbc_url: str,
+    user: str,
+    password: str,
+    table: str = "staging_recordings",
+) -> None:
+    """Append validated rows to the ClickHouse staging table through JDBC."""
+    output = (
+        transformed.withColumn("dag_run_id", F.lit(dag_run_id))
+        .withColumn("loaded_at", F.current_timestamp())
+        .select(
+            "dag_run_id",
+            "recording_mbid",
+            "artist",
+            "title",
+            "album",
+            "release_year",
+            "duration_seconds",
+            "genre",
+            "genre_probability",
+            "danceability",
+            "danceability_probability",
+            "mood_acoustic",
+            "mood_acoustic_probability",
+            "mood_aggressive",
+            "mood_aggressive_probability",
+            "mood_happy",
+            "mood_happy_probability",
+            "mood_party",
+            "mood_party_probability",
+            "mood_relaxed",
+            "mood_relaxed_probability",
+            "mood_sad",
+            "mood_sad_probability",
+            "tonality",
+            "tonality_probability",
+            "voice_instrumental",
+            "voice_instrumental_probability",
+            "source_file",
+            "loaded_at",
+        )
+    )
+    (
+        output.write.format("jdbc")
+        .option("url", jdbc_url)
+        .option("dbtable", table)
+        .option("driver", "com.clickhouse.jdbc.ClickHouseDriver")
+        .option("user", user)
+        .option("password", password)
+        .option("batchsize", "1000")
+        .mode("append")
+        .save()
     )
 
 
@@ -194,6 +283,16 @@ def build_parser() -> argparse.ArgumentParser:
         default=0,
         help="maximum number of input files (default: all)",
     )
+    parser.add_argument(
+        "--write-clickhouse",
+        action="store_true",
+        help="append transformed records to ClickHouse staging",
+    )
+    parser.add_argument(
+        "--dag-run-id",
+        default=None,
+        help="load identifier (required by Airflow; generated for a manual write)",
+    )
     return parser
 
 
@@ -206,25 +305,50 @@ def main(argv: list[str] | None = None) -> int:
         print("--show and --limit cannot be negative")
         return 2
 
-    spark = (
+    spark_builder = (
         SparkSession.builder.appName("acousticbrainz-highlevel-transform")
         .master(args.master)
         .config("spark.sql.session.timeZone", "UTC")
         .config("spark.sql.shuffle.partitions", "4")
         .config("spark.ui.enabled", "false")
-        .getOrCreate()
     )
+    if args.write_clickhouse:
+        spark_builder = spark_builder.config(
+            "spark.jars",
+            os.getenv(
+                "CLICKHOUSE_JDBC_JAR",
+                "/opt/airflow/jars/clickhouse-jdbc-0.9.8-all.jar",
+            ),
+        )
+    spark = spark_builder.getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
 
     try:
         raw = read_highlevel(spark, args.input, args.limit)
         transformed = transform_highlevel(raw).cache()
+        valid_count = validate_transformed(transformed)
 
         print(f"Raw documents: {raw.count()}")
-        print(f"Valid unique recordings: {transformed.count()}")
+        print(f"Valid unique recordings: {valid_count}")
         transformed.printSchema()
         if args.show:
             transformed.show(args.show, truncate=40, vertical=True)
+        if args.write_clickhouse:
+            dag_run_id = args.dag_run_id or f"manual-{uuid4()}"
+            database = os.getenv("CLICKHOUSE_DB", "music")
+            host = os.getenv("CLICKHOUSE_HOST", "localhost")
+            port = os.getenv("CLICKHOUSE_PORT", "8123")
+            write_to_clickhouse(
+                transformed,
+                dag_run_id=dag_run_id,
+                jdbc_url=f"jdbc:clickhouse://{host}:{port}/{database}",
+                user=os.getenv("CLICKHOUSE_USER", "etl"),
+                password=os.getenv("CLICKHOUSE_PASSWORD", "etl"),
+            )
+            print(
+                f"Loaded {valid_count} records into "
+                f"{database}.staging_recordings (dag_run_id={dag_run_id})"
+            )
     finally:
         spark.stop()
 

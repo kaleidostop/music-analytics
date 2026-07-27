@@ -16,6 +16,7 @@ x-airflow-common: &airflow-common
     CLICKHOUSE_DB: music
     CLICKHOUSE_USER: ${CLICKHOUSE_ETL_USER:-etl}
     CLICKHOUSE_PASSWORD: ${CLICKHOUSE_ETL_PASSWORD:-etl}
+    CLICKHOUSE_JDBC_JAR: /opt/airflow/jars/clickhouse-jdbc-0.9.8-all.jar
     PYSPARK_PYTHON: /home/airflow/.local/bin/python
   volumes:
     - ./dags:/opt/airflow/dags
