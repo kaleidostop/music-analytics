@@ -67,6 +67,15 @@ CREATE TABLE IF NOT EXISTS music.recordings
 ENGINE = ReplacingMergeTree(loaded_at)
 ORDER BY recording_mbid;
 
+CREATE TABLE IF NOT EXISTS music.published_runs
+(
+    dag_run_id String,
+    source_rows UInt64,
+    published_at DateTime64(3, 'UTC') DEFAULT now64(3)
+)
+ENGINE = ReplacingMergeTree(published_at)
+ORDER BY dag_run_id;
+
 CREATE VIEW IF NOT EXISTS music.v_recording_overview AS
 SELECT *
 FROM music.recordings FINAL;

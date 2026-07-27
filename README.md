@@ -108,6 +108,14 @@ docker compose exec airflow-scheduler `
   --dag-run-id manual-test
 ```
 
+Публикация проверенного запуска в таблицу для Power BI:
+
+```powershell
+python src/publish_staging.py manual-test
+```
+
+Повторная публикация того же `dag_run_id` безопасно пропускается.
+
 Остановка:
 
 ```powershell
