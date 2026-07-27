@@ -72,3 +72,36 @@ python src/transform_highlevel.py
 выводится в консоль; запись в ClickHouse будет следующим этапом.
 
 Инструкция полного запуска появится после подготовки Docker Compose и первого сквозного ETL-процесса.
+
+## Docker Compose
+
+Скопировать `.env.example` в `.env` и заменить демонстрационные пароли. Затем:
+
+```powershell
+docker compose build
+docker compose up airflow-init
+docker compose up -d
+docker compose ps
+```
+
+Сервисы:
+
+- Airflow: <http://localhost:8080>;
+- ClickHouse HTTP: <http://localhost:8123>;
+- ClickHouse native protocol: `localhost:9000`.
+
+Проверка PySpark внутри Airflow-образа:
+
+```powershell
+docker compose exec airflow-scheduler `
+  python /opt/airflow/src/transform_highlevel.py --limit 10 --show 0
+```
+
+Остановка:
+
+```powershell
+docker compose down
+```
+
+Данные Postgres и ClickHouse находятся в именованных Docker volumes и при
+обычном `down` не удаляются.

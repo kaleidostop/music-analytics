@@ -156,8 +156,12 @@ def transform_highlevel(raw: DataFrame) -> DataFrame:
     )
 
 
-def read_highlevel(spark: SparkSession, input_path: Path) -> DataFrame:
+def read_highlevel(
+    spark: SparkSession, input_path: Path, limit: int = 0
+) -> DataFrame:
     files = sorted(str(path.resolve()) for path in input_path.rglob("*.json"))
+    if limit:
+        files = files[:limit]
     if not files:
         raise ValueError(f"No JSON files found under {input_path}")
     return spark.read.schema(acousticbrainz_highlevel_schema()).json(files)
@@ -184,6 +188,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=10,
         help="number of transformed rows to display",
     )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=0,
+        help="maximum number of input files (default: all)",
+    )
     return parser
 
 
@@ -192,8 +202,8 @@ def main(argv: list[str] | None = None) -> int:
     if not args.input.is_dir():
         print(f"Input directory does not exist: {args.input}")
         return 2
-    if args.show < 0:
-        print("--show cannot be negative")
+    if args.show < 0 or args.limit < 0:
+        print("--show and --limit cannot be negative")
         return 2
 
     spark = (
@@ -207,7 +217,7 @@ def main(argv: list[str] | None = None) -> int:
     spark.sparkContext.setLogLevel("WARN")
 
     try:
-        raw = read_highlevel(spark, args.input)
+        raw = read_highlevel(spark, args.input, args.limit)
         transformed = transform_highlevel(raw).cache()
 
         print(f"Raw documents: {raw.count()}")
