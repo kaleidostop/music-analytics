@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "music_catalog_analysis"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "4919d3fc-dc5b-4c86-b8de-5a1add6709fc"
+  }
+}

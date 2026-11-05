@@ -1,0 +1,176 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "083d810342040c83b7a2",
+  "position": {
+    "x": 680,
+    "y": 330,
+    "z": 6000,
+    "height": 330,
+    "width": 1200,
+    "tabOrder": 6000
+  },
+  "visual": {
+    "visualType": "lineChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "v_recording_overview"
+                    }
+                  },
+                  "Property": "Decade"
+                }
+              },
+              "queryRef": "v_recording_overview.Decade",
+              "nativeQueryRef": "Decade",
+              "displayName": "Десятилетие",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "v_recording_overview"
+                    }
+                  },
+                  "Property": "Danceable share"
+                }
+              },
+              "queryRef": "v_recording_overview.Danceable share",
+              "nativeQueryRef": "Danceable share",
+              "displayName": "Танцевальные"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "v_recording_overview"
+                    }
+                  },
+                  "Property": "Happy share"
+                }
+              },
+              "queryRef": "v_recording_overview.Happy share",
+              "nativeQueryRef": "Happy share",
+              "displayName": "Жизнерадостные"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "v_recording_overview"
+                    }
+                  },
+                  "Property": "Relaxed share"
+                }
+              },
+              "queryRef": "v_recording_overview.Relaxed share",
+              "nativeQueryRef": "Relaxed share",
+              "displayName": "Расслабленные"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "v_recording_overview"
+                  }
+                },
+                "Property": "Decade"
+              }
+            },
+            "direction": "Ascending"
+          }
+        ],
+        "isDefaultSort": false
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": { "expr": { "Literal": { "Value": "true" } } },
+            "text": { "expr": { "Literal": { "Value": "'Характеристики по десятилетиям'" } } }
+          }
+        }
+      ],
+      "padding": [
+        {
+          "properties": {
+            "top": { "expr": { "Literal": { "Value": "8D" } } },
+            "bottom": { "expr": { "Literal": { "Value": "8D" } } },
+            "left": { "expr": { "Literal": { "Value": "8D" } } },
+            "right": { "expr": { "Literal": { "Value": "8D" } } }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "d1d0a40900e29ae6a9c0",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "v_recording_overview"
+              }
+            },
+            "Property": "Decade"
+          }
+        },
+        "type": "Advanced",
+        "filter": {
+          "Version": 2,
+          "From": [
+            {
+              "Name": "v",
+              "Entity": "v_recording_overview",
+              "Type": 0
+            }
+          ],
+          "Where": [
+            {
+              "Condition": {
+                "Between": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Source": "v"
+                        }
+                      },
+                      "Property": "Decade"
+                    }
+                  },
+                  "LowerBound": { "Literal": { "Value": "1950L" } },
+                  "UpperBound": { "Literal": { "Value": "2010L" } }
+                }
+              }
+            }
+          ]
+        },
+        "howCreated": "User"
+      }
+    ]
+  }
+}

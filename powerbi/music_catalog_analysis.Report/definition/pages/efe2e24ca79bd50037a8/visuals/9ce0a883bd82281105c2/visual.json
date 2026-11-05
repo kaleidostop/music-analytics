@@ -1,0 +1,57 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "9ce0a883bd82281105c2",
+  "position": {
+    "x": 500,
+    "y": 150,
+    "z": 2000,
+    "height": 140,
+    "width": 420,
+    "tabOrder": 2000
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "v_recording_overview"
+                    }
+                  },
+                  "Property": "Genres"
+                }
+              },
+              "queryRef": "v_recording_overview.Genres",
+              "nativeQueryRef": "Genres",
+              "displayName": "Жанры"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "v_recording_overview"
+                  }
+                },
+                "Property": "Genres"
+              }
+            },
+            "direction": "Descending"
+          }
+        ],
+        "isDefaultSort": true
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

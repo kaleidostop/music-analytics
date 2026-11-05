@@ -1,0 +1,57 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "ab2cf6978c54896461d8",
+  "position": {
+    "x": 960,
+    "y": 150,
+    "z": 3000,
+    "height": 140,
+    "width": 420,
+    "tabOrder": 3000
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "v_recording_overview"
+                    }
+                  },
+                  "Property": "Average duration, min"
+                }
+              },
+              "queryRef": "v_recording_overview.Average duration, min",
+              "nativeQueryRef": "Average duration, min",
+              "displayName": "Средняя длительность, мин"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "v_recording_overview"
+                  }
+                },
+                "Property": "Average duration, min"
+              }
+            },
+            "direction": "Descending"
+          }
+        ],
+        "isDefaultSort": true
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

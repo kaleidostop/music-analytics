@@ -1,0 +1,57 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "73f647865ce62d2cd048",
+  "position": {
+    "x": 40,
+    "y": 150,
+    "z": 1000,
+    "height": 140,
+    "width": 420,
+    "tabOrder": 1000
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "v_recording_overview"
+                    }
+                  },
+                  "Property": "Recordings"
+                }
+              },
+              "queryRef": "v_recording_overview.Recordings",
+              "nativeQueryRef": "Recordings",
+              "displayName": "Записи"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "v_recording_overview"
+                  }
+                },
+                "Property": "Recordings"
+              }
+            },
+            "direction": "Descending"
+          }
+        ],
+        "isDefaultSort": true
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

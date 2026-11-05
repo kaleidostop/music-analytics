@@ -44,8 +44,8 @@ clickhouse-logs/
 # Power BI binary/local artifacts
 *.pbix
 *.pbit
-!powerbi/*.pbix
-!powerbi/*.pbit
+!powerbi/**/*.json
+powerbi/**/.pbi/
 
 # Temporary files
 tmp/

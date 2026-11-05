@@ -1,0 +1,360 @@
+table v_recording_overview
+	lineageTag: b25d4c54-011d-4c23-b9da-e612b7068045
+
+	measure Recordings =
+			
+			COUNTROWS('v_recording_overview')
+		formatString: 0
+		lineageTag: 4269eaae-8261-4210-b89c-4f23b25969c7
+
+	measure Genres =
+			
+			DISTINCTCOUNTNOBLANK('v_recording_overview'[genre])
+		formatString: 0
+		lineageTag: 5bfeccd7-2bb5-4555-ba17-38ffb9005dc7
+
+	measure 'Average duration, min' =
+			
+			DIVIDE(
+			    AVERAGE('v_recording_overview'[duration_seconds]),
+			    60
+			)
+		formatString: 0.00
+		lineageTag: 7375dae2-4920-4f13-91dd-b7a7fc6f5534
+
+	measure 'Average genre confidence' =
+			
+			AVERAGE('v_recording_overview'[genre_probability])
+		formatString: 0.0%;-0.0%;0.0%
+		lineageTag: 9ca2042d-4dd8-490f-a416-61def291f604
+
+	measure 'Danceable share' =
+			
+			DIVIDE(
+			    CALCULATE(
+			        [Recordings],
+			        'v_recording_overview'[danceability] = "danceable"
+			    ),
+			    [Recordings]
+			)
+		formatString: 0.0%;-0.0%;0.0%
+		lineageTag: 7b033a3f-762d-42eb-8357-f3f61083ebed
+
+	measure 'Happy share' =
+			
+			DIVIDE(
+			    CALCULATE(
+			        [Recordings],
+			        'v_recording_overview'[mood_happy] = "happy"
+			    ),
+			    [Recordings]
+			)
+		formatString: 0.0%;-0.0%;0.0%
+		lineageTag: a262e488-3c12-462d-90e3-bab063ec0d3d
+
+	measure 'Relaxed share' =
+			
+			DIVIDE(
+			    CALCULATE(
+			        [Recordings],
+			        'v_recording_overview'[mood_relaxed] = "relaxed"
+			    ),
+			    [Recordings]
+			)
+		formatString: 0.0%;-0.0%;0.0%
+		lineageTag: f483a2ed-e5ac-4c24-aa0b-7dd813ab6839
+
+	measure 'Aggressive share' =
+			
+			DIVIDE(
+			    CALCULATE(
+			        [Recordings],
+			        'v_recording_overview'[mood_aggressive] = "aggressive"
+			    ),
+			    [Recordings]
+			)
+		formatString: 0.0%;-0.0%;0.0%
+		lineageTag: 5a037bb4-1604-48cb-b442-db2d67d66759
+
+	column recording_mbid
+		dataType: string
+		lineageTag: 3fb24e23-ff49-48ec-ac50-99732ebe8361
+		summarizeBy: none
+		sourceColumn: recording_mbid
+
+		annotation SummarizationSetBy = Automatic
+
+	column artist
+		dataType: string
+		lineageTag: e232ac8a-2c60-4bce-9879-8408ce666505
+		summarizeBy: none
+		sourceColumn: artist
+
+		annotation SummarizationSetBy = Automatic
+
+	column title
+		dataType: string
+		lineageTag: 159aae20-7da6-4f3e-abba-86aac3776ea4
+		summarizeBy: none
+		sourceColumn: title
+
+		annotation SummarizationSetBy = Automatic
+
+	column album
+		dataType: string
+		lineageTag: 90315b55-5453-4b31-a6df-f346cd0d8854
+		summarizeBy: none
+		sourceColumn: album
+
+		annotation SummarizationSetBy = Automatic
+
+	column release_year
+		dataType: int64
+		formatString: 0
+		lineageTag: 0e88a93b-a16f-4194-9899-8e64081a9f35
+		summarizeBy: none
+		sourceColumn: release_year
+
+		annotation SummarizationSetBy = Automatic
+
+	column duration_seconds
+		dataType: double
+		lineageTag: 791e93ea-295a-47cd-86f9-19019c517d3b
+		summarizeBy: sum
+		sourceColumn: duration_seconds
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column genre
+		dataType: string
+		lineageTag: 563acba1-bc1f-4c00-9cc4-66a40d0bee83
+		summarizeBy: none
+		sourceColumn: genre
+
+		annotation SummarizationSetBy = Automatic
+
+	column genre_probability
+		dataType: double
+		lineageTag: 109c8a2c-2a56-4bfb-97f7-9ee056aa5a09
+		summarizeBy: sum
+		sourceColumn: genre_probability
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column danceability
+		dataType: string
+		lineageTag: 9c25111b-8d46-4602-b4bd-9bb75e55c797
+		summarizeBy: none
+		sourceColumn: danceability
+
+		annotation SummarizationSetBy = Automatic
+
+	column danceability_probability
+		dataType: double
+		lineageTag: b4615f3d-db66-40cb-88cf-f105cfcf5d44
+		summarizeBy: sum
+		sourceColumn: danceability_probability
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column mood_acoustic
+		dataType: string
+		lineageTag: bbad9705-deb3-43b9-9f05-d52bc37b7d3e
+		summarizeBy: none
+		sourceColumn: mood_acoustic
+
+		annotation SummarizationSetBy = Automatic
+
+	column mood_acoustic_probability
+		dataType: double
+		lineageTag: 5d4c2708-03e4-4df4-bba8-b2017b770a86
+		summarizeBy: sum
+		sourceColumn: mood_acoustic_probability
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column mood_aggressive
+		dataType: string
+		lineageTag: 8e1b9c43-5e86-42ec-8d76-7c3d86a941f3
+		summarizeBy: none
+		sourceColumn: mood_aggressive
+
+		annotation SummarizationSetBy = Automatic
+
+	column mood_aggressive_probability
+		dataType: double
+		lineageTag: 615c690f-93dc-4b59-8ffd-a5fd8fcb920f
+		summarizeBy: sum
+		sourceColumn: mood_aggressive_probability
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column mood_happy
+		dataType: string
+		lineageTag: fb5ea084-a37d-44b3-823c-eaa20120f3fc
+		summarizeBy: none
+		sourceColumn: mood_happy
+
+		annotation SummarizationSetBy = Automatic
+
+	column mood_happy_probability
+		dataType: double
+		lineageTag: c7f27bbd-7744-4bbf-80fc-b9397da3528f
+		summarizeBy: sum
+		sourceColumn: mood_happy_probability
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column mood_party
+		dataType: string
+		lineageTag: de890827-990e-44c7-a034-630b7e511cc7
+		summarizeBy: none
+		sourceColumn: mood_party
+
+		annotation SummarizationSetBy = Automatic
+
+	column mood_party_probability
+		dataType: double
+		lineageTag: 7883812c-0c1e-493a-9812-cade66186e0f
+		summarizeBy: sum
+		sourceColumn: mood_party_probability
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column mood_relaxed
+		dataType: string
+		lineageTag: 018bb27d-a634-4a66-8bac-9c53453a5419
+		summarizeBy: none
+		sourceColumn: mood_relaxed
+
+		annotation SummarizationSetBy = Automatic
+
+	column mood_relaxed_probability
+		dataType: double
+		lineageTag: 33d58604-cc29-4474-bad9-48ee0f2d8cb2
+		summarizeBy: sum
+		sourceColumn: mood_relaxed_probability
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column mood_sad
+		dataType: string
+		lineageTag: 558278e9-6aca-4c2a-80b7-393c18c8720e
+		summarizeBy: none
+		sourceColumn: mood_sad
+
+		annotation SummarizationSetBy = Automatic
+
+	column mood_sad_probability
+		dataType: double
+		lineageTag: 42e7596c-7ccb-49b7-9035-62e6121a6772
+		summarizeBy: sum
+		sourceColumn: mood_sad_probability
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column tonality
+		dataType: string
+		lineageTag: a4c8e02b-1b39-4bf6-9f18-c17dd157e966
+		summarizeBy: none
+		sourceColumn: tonality
+
+		annotation SummarizationSetBy = Automatic
+
+	column tonality_probability
+		dataType: double
+		lineageTag: 7161c237-ca42-4270-a3af-ecdb36a92b80
+		summarizeBy: sum
+		sourceColumn: tonality_probability
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column voice_instrumental
+		dataType: string
+		lineageTag: 79e19bb9-99e8-44bb-afa0-f67213425603
+		summarizeBy: none
+		sourceColumn: voice_instrumental
+
+		annotation SummarizationSetBy = Automatic
+
+	column voice_instrumental_probability
+		dataType: double
+		lineageTag: 05890131-73f6-4e6c-b571-da4f03e2e968
+		summarizeBy: sum
+		sourceColumn: voice_instrumental_probability
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column source_file
+		dataType: string
+		lineageTag: ab16a83a-74d3-4a2d-8fc3-b9380a11fb80
+		summarizeBy: none
+		sourceColumn: source_file
+
+		annotation SummarizationSetBy = Automatic
+
+	column loaded_at
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 74a7a2dc-a542-426c-a7e4-db98b7e6f3fd
+		summarizeBy: none
+		sourceColumn: loaded_at
+
+		variation Variation
+			isDefault
+			relationship: 0e024cda-2962-4975-b52d-5cc97286592b
+			defaultHierarchy: LocalDateTable_c9b2eaa9-f31a-4174-9f65-0a330c240bb0.'Иерархия дат'
+
+		annotation SummarizationSetBy = Automatic
+
+	column Decade = ```
+			
+			VAR YearValue = 'v_recording_overview'[release_year]
+			RETURN
+			    IF(
+			        YearValue >= 1900 && YearValue <= 2026,
+			        INT(YearValue / 10) * 10,
+			        BLANK()
+			    )
+			
+			```
+		formatString: 0
+		lineageTag: 80a0b7e5-3b4b-4ec7-9c2c-1060e4d9a80c
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	partition v_recording_overview = m
+		mode: import
+		source =
+				let
+				    Источник = ClickHouse.Database("localhost", 8123, "music", []),
+				    music_Database = Источник{[Name="music",Kind="Database"]}[Data],
+				    v_recording_overview_Table = music_Database{[Name="v_recording_overview",Kind="Table"]}[Data]
+				in
+				    v_recording_overview_Table
+
+	annotation PBI_ResultType = Table
+

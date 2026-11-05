@@ -1,0 +1,5 @@
+relationship 0e024cda-2962-4975-b52d-5cc97286592b
+	joinOnDateBehavior: datePartOnly
+	fromColumn: v_recording_overview.loaded_at
+	toColumn: LocalDateTable_c9b2eaa9-f31a-4174-9f65-0a330c240bb0.Date
+
