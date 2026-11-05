@@ -1,4 +1,4 @@
-"""Download and verify the official AcousticBrainz sample archives."""
+"""Download and verify the AcousticBrainz high-level sample archive."""
 
 from __future__ import annotations
 
@@ -30,16 +30,10 @@ class Dataset:
         return f"{BASE_URL}/{self.filename}"
 
 
-DATASETS = {
-    "highlevel": Dataset(
-        filename="acousticbrainz-highlevel-sample-json-20220623-0.tar.zst",
-        sha256="952bdbc23a0684ebd931c59c648ca847b5a8281030f5b305adf449e563955c9f",
-    ),
-    "lowlevel": Dataset(
-        filename="acousticbrainz-lowlevel-sample-json-20220623-0.tar.zst",
-        sha256="8fc3c44c8beed22c075bea954edca3d35927bca0193cbf0a31b07aecfec3db80",
-    ),
-}
+DATASET = Dataset(
+    filename="acousticbrainz-highlevel-sample-json-20220623-0.tar.zst",
+    sha256="952bdbc23a0684ebd931c59c648ca847b5a8281030f5b305adf449e563955c9f",
+)
 
 
 def file_sha256(path: Path) -> str:
@@ -133,13 +127,7 @@ def download_dataset(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Download verified AcousticBrainz sample JSON archives."
-    )
-    parser.add_argument(
-        "--dataset",
-        choices=(*DATASETS, "both"),
-        default="both",
-        help="archive to download (default: both)",
+        description="Download the verified AcousticBrainz high-level sample."
     )
     parser.add_argument(
         "--output-dir",
@@ -157,15 +145,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    names = DATASETS if args.dataset == "both" else (args.dataset,)
 
     try:
-        for name in names:
-            download_dataset(
-                DATASETS[name],
-                args.output_dir,
-                overwrite=args.overwrite,
-            )
+        download_dataset(
+            DATASET,
+            args.output_dir,
+            overwrite=args.overwrite,
+        )
     except (OSError, RuntimeError, urllib.error.URLError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1

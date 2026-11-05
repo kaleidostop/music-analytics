@@ -1,0 +1,8 @@
+.git
+.env
+.venv
+data
+docs
+powerbi
+__pycache__
+*.pyc

@@ -20,7 +20,7 @@ from pyspark.sql.types import (
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_INPUT = PROJECT_ROOT / "data" / "raw" / "schema-sample" / "highlevel"
+DEFAULT_INPUT = PROJECT_ROOT / "data" / "raw" / "highlevel"
 UUID_PATTERN = (
     r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
     r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
@@ -190,7 +190,7 @@ def validate_transformed(transformed: DataFrame) -> int:
 def write_to_clickhouse(
     transformed: DataFrame,
     *,
-    dag_run_id: str,
+    load_id: str,
     jdbc_url: str,
     user: str,
     password: str,
@@ -198,10 +198,10 @@ def write_to_clickhouse(
 ) -> None:
     """Append validated rows to the ClickHouse staging table through JDBC."""
     output = (
-        transformed.withColumn("dag_run_id", F.lit(dag_run_id))
+        transformed.withColumn("load_id", F.lit(load_id))
         .withColumn("loaded_at", F.current_timestamp())
         .select(
-            "dag_run_id",
+            "load_id",
             "recording_mbid",
             "artist",
             "title",
@@ -289,9 +289,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="append transformed records to ClickHouse staging",
     )
     parser.add_argument(
-        "--dag-run-id",
+        "--load-id",
         default=None,
-        help="load identifier (required by Airflow; generated for a manual write)",
+        help="load identifier (generated automatically when omitted)",
     )
     return parser
 
@@ -317,7 +317,7 @@ def main(argv: list[str] | None = None) -> int:
             "spark.jars",
             os.getenv(
                 "CLICKHOUSE_JDBC_JAR",
-                "/opt/airflow/jars/clickhouse-jdbc-0.9.8-all.jar",
+                "/opt/jars/clickhouse-jdbc.jar",
             ),
         )
     spark = spark_builder.getOrCreate()
@@ -334,20 +334,20 @@ def main(argv: list[str] | None = None) -> int:
         if args.show:
             transformed.show(args.show, truncate=40, vertical=True)
         if args.write_clickhouse:
-            dag_run_id = args.dag_run_id or f"manual-{uuid4()}"
+            load_id = args.load_id or f"load-{uuid4()}"
             database = os.getenv("CLICKHOUSE_DB", "music")
             host = os.getenv("CLICKHOUSE_HOST", "localhost")
             port = os.getenv("CLICKHOUSE_PORT", "8123")
             write_to_clickhouse(
                 transformed,
-                dag_run_id=dag_run_id,
+                load_id=load_id,
                 jdbc_url=f"jdbc:clickhouse://{host}:{port}/{database}",
                 user=os.getenv("CLICKHOUSE_USER", "etl"),
                 password=os.getenv("CLICKHOUSE_PASSWORD", "etl"),
             )
             print(
                 f"Loaded {valid_count} records into "
-                f"{database}.staging_recordings (dag_run_id={dag_run_id})"
+                f"{database}.staging_recordings (load_id={load_id})"
             )
     finally:
         spark.stop()

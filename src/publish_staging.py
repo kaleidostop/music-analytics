@@ -70,19 +70,19 @@ class ClickHouse:
             return response.read().decode("utf-8").strip()
 
 
-def publish(client: ClickHouse, dag_run_id: str) -> int:
+def publish(client: ClickHouse, load_id: str) -> int:
     already_published = int(
         client.execute(
             """
             SELECT count()
-            FROM published_runs FINAL
-            WHERE dag_run_id = {dag_run_id:String}
+            FROM published_loads FINAL
+            WHERE load_id = {load_id:String}
             """,
-            dag_run_id=dag_run_id,
+            load_id=load_id,
         )
     )
     if already_published:
-        print(f"Run {dag_run_id!r} is already published; nothing to do.")
+        print(f"Load {load_id!r} is already published; nothing to do.")
         return 0
 
     source_rows, unique_mbids = map(
@@ -91,17 +91,17 @@ def publish(client: ClickHouse, dag_run_id: str) -> int:
             """
             SELECT count(), uniqExact(recording_mbid)
             FROM staging_recordings
-            WHERE dag_run_id = {dag_run_id:String}
+            WHERE load_id = {load_id:String}
             FORMAT TSV
             """,
-            dag_run_id=dag_run_id,
+            load_id=load_id,
         ).split("\t"),
     )
     if source_rows == 0:
-        raise ValueError(f"No staging rows found for run {dag_run_id!r}")
+        raise ValueError(f"No staging rows found for load {load_id!r}")
     if source_rows != unique_mbids:
         raise ValueError(
-            f"Run {dag_run_id!r} contains {source_rows} rows but "
+            f"Load {load_id!r} contains {source_rows} rows but "
             f"{unique_mbids} unique MBIDs"
         )
 
@@ -111,16 +111,16 @@ def publish(client: ClickHouse, dag_run_id: str) -> int:
         INSERT INTO recordings ({columns})
         SELECT {columns}
         FROM staging_recordings
-        WHERE dag_run_id = {{dag_run_id:String}}
+        WHERE load_id = {{load_id:String}}
         """,
-        dag_run_id=dag_run_id,
+        load_id=load_id,
     )
     client.execute(
         """
-        INSERT INTO published_runs (dag_run_id, source_rows)
-        VALUES ({dag_run_id:String}, {source_rows:UInt64})
+        INSERT INTO published_loads (load_id, source_rows)
+        VALUES ({load_id:String}, {source_rows:UInt64})
         """,
-        dag_run_id=dag_run_id,
+        load_id=load_id,
         source_rows=str(source_rows),
     )
 
@@ -133,10 +133,10 @@ def publish(client: ClickHouse, dag_run_id: str) -> int:
             (
                 SELECT recording_mbid
                 FROM staging_recordings
-                WHERE dag_run_id = {dag_run_id:String}
+                WHERE load_id = {load_id:String}
             )
             """,
-            dag_run_id=dag_run_id,
+            load_id=load_id,
         )
     )
     if published_rows != source_rows:
@@ -144,7 +144,7 @@ def publish(client: ClickHouse, dag_run_id: str) -> int:
             f"Expected {source_rows} published rows, found {published_rows}"
         )
 
-    print(f"Published {published_rows} recordings from run {dag_run_id!r}.")
+    print(f"Published {published_rows} recordings from load {load_id!r}.")
     return published_rows
 
 
@@ -152,7 +152,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Publish one validated staging run to ClickHouse recordings."
     )
-    parser.add_argument("dag_run_id", help="staging run identifier to publish")
+    parser.add_argument("load_id", help="staging load identifier to publish")
     parser.add_argument(
         "--host", default=os.getenv("CLICKHOUSE_HOST", "localhost")
     )
@@ -179,7 +179,7 @@ def main(argv: list[str] | None = None) -> int:
         args.host, args.port, args.database, args.user, args.password
     )
     try:
-        publish(client, args.dag_run_id)
+        publish(client, args.load_id)
     except (ValueError, RuntimeError, urllib.error.URLError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1

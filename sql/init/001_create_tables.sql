@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS music.staging_recordings
 (
-    dag_run_id String,
-    recording_mbid UUID,
+    load_id String,
+    recording_mbid String,
     artist Nullable(String),
     title Nullable(String),
     album Nullable(String),
@@ -31,11 +31,11 @@ CREATE TABLE IF NOT EXISTS music.staging_recordings
     loaded_at DateTime64(3, 'UTC') DEFAULT now64(3)
 )
 ENGINE = MergeTree
-ORDER BY (dag_run_id, recording_mbid);
+ORDER BY (load_id, recording_mbid);
 
 CREATE TABLE IF NOT EXISTS music.recordings
 (
-    recording_mbid UUID,
+    recording_mbid String,
     artist Nullable(String),
     title Nullable(String),
     album Nullable(String),
@@ -67,14 +67,14 @@ CREATE TABLE IF NOT EXISTS music.recordings
 ENGINE = ReplacingMergeTree(loaded_at)
 ORDER BY recording_mbid;
 
-CREATE TABLE IF NOT EXISTS music.published_runs
+CREATE TABLE IF NOT EXISTS music.published_loads
 (
-    dag_run_id String,
+    load_id String,
     source_rows UInt64,
     published_at DateTime64(3, 'UTC') DEFAULT now64(3)
 )
 ENGINE = ReplacingMergeTree(published_at)
-ORDER BY dag_run_id;
+ORDER BY load_id;
 
 CREATE VIEW IF NOT EXISTS music.v_recording_overview AS
 SELECT *
@@ -82,10 +82,41 @@ FROM music.recordings FINAL;
 
 CREATE VIEW IF NOT EXISTS music.v_genre_summary AS
 SELECT
-    genre,
+    coalesce(genre, 'unknown') AS genre,
     count() AS recordings_count,
     avg(genre_probability) AS average_genre_probability,
+    countIf(genre_probability < 0.5) / count() AS low_confidence_share,
+    countIf(
+        artist IS NULL OR empty(artist)
+        OR title IS NULL OR empty(title)
+        OR release_year IS NULL
+    ) / count() AS incomplete_metadata_share,
     countIf(danceability = 'danceable') / count() AS danceable_share,
     avg(duration_seconds) AS average_duration_seconds
 FROM music.recordings FINAL
 GROUP BY genre;
+
+CREATE VIEW IF NOT EXISTS music.v_data_quality_summary AS
+SELECT
+    recordings_count,
+    missing_artist_count,
+    missing_title_count,
+    missing_year_count,
+    missing_genre_count,
+    low_confidence_count,
+    if(recordings_count = 0, 0, missing_artist_count / recordings_count) AS missing_artist_share,
+    if(recordings_count = 0, 0, missing_title_count / recordings_count) AS missing_title_share,
+    if(recordings_count = 0, 0, missing_year_count / recordings_count) AS missing_year_share,
+    if(recordings_count = 0, 0, missing_genre_count / recordings_count) AS missing_genre_share,
+    if(recordings_count = 0, 0, low_confidence_count / recordings_count) AS low_confidence_share
+FROM
+(
+    SELECT
+        count() AS recordings_count,
+        countIf(artist IS NULL OR empty(artist)) AS missing_artist_count,
+        countIf(title IS NULL OR empty(title)) AS missing_title_count,
+        countIf(release_year IS NULL) AS missing_year_count,
+        countIf(genre IS NULL OR empty(genre)) AS missing_genre_count,
+        countIf(genre_probability < 0.5) AS low_confidence_count
+    FROM music.recordings FINAL
+);

@@ -20,12 +20,6 @@ venv/
 .DS_Store
 Thumbs.db
 
-# Airflow
-logs/
-airflow.db
-airflow.cfg
-standalone_admin_password.txt
-
 # Local datasets and processing results
 data/raw/
 data/processed/
@@ -50,6 +44,8 @@ clickhouse-logs/
 # Power BI binary/local artifacts
 *.pbix
 *.pbit
+!powerbi/*.pbix
+!powerbi/*.pbit
 
 # Temporary files
 tmp/

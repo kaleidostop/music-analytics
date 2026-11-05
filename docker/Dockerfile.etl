@@ -1,0 +1,27 @@
+FROM python:3.12-slim
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends \
+      curl \
+      openjdk-21-jre-headless \
+      zstd \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 \
+    PYSPARK_PYTHON=/usr/local/bin/python \
+    CLICKHOUSE_JDBC_JAR=/opt/jars/clickhouse-jdbc.jar
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --requirement requirements.txt
+
+RUN mkdir --parents /opt/jars \
+    && curl --fail --location --silent --show-error \
+      https://repo1.maven.org/maven2/com/clickhouse/clickhouse-jdbc/0.9.8/clickhouse-jdbc-0.9.8-all.jar \
+      --output "$CLICKHOUSE_JDBC_JAR"
+
+COPY src ./src
+
+CMD ["python", "src/transform_highlevel.py", "--help"]

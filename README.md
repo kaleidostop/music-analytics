@@ -1,126 +1,118 @@
 # Music Analytics Pipeline
 
-Учебный ETL/BI-проект для анализа акустических характеристик записей из AcousticBrainz.
+Учебный ETL/BI-проект для подготовки публичных данных AcousticBrainz к анализу
+в Power BI. Пайплайн преобразует вложенные JSON-документы в проверенный набор
+данных и витрины ClickHouse.
+
+Цель отчёта — помочь аналитику оценить состав музыкального каталога, полноту
+метаданных и уверенность автоматической классификации жанров.
+
+ETL-часть проекта работает сквозным образом. Отчёт Power BI находится в
+процессе подготовки.
+
+## Результат
+
+Для отчёта Power BI подготовлены три представления:
+
+- `v_recording_overview` — записи и их характеристики;
+- `v_genre_summary` — показатели состава и качества по жанрам;
+- `v_data_quality_summary` — общие показатели пропусков и низкой уверенности.
+
+На одной странице отчёта достаточно показать количество записей, долю
+пропущенных метаданных, долю классификаций с низкой уверенностью, распределение
+по жанрам и таблицу проблемных жанров.
+
+<!--
+После завершения отчёта экспортируйте его в docs/dashboard.png и
+docs/dashboard.pdf, затем добавьте сюда:
+
+![Power BI dashboard](docs/dashboard.png)
+-->
 
 ## Архитектура
 
-```text
-AcousticBrainz → Airflow → Spark → ClickHouse → Power BI
+```mermaid
+flowchart LR
+    A[AcousticBrainz JSON] --> B[PySpark validation and transform]
+    B --> C[ClickHouse staging]
+    C --> D[Checked publication]
+    D --> E[Analytical views]
+    E --> F[Power BI]
 ```
 
-- Airflow оркестрирует загрузку и обработку.
-- Spark очищает и преобразует JSON-данные.
-- ClickHouse хранит факты и аналитические витрины.
-- Power BI визуализирует жанры, настроение, BPM и качество данных.
+PySpark читает JSON по явной схеме, приводит вложенные поля к табличному виду и
+проверяет идентификаторы и дубликаты. Результат загружается во временную таблицу
+ClickHouse. Отдельный шаг проверяет загрузку и публикует её в основную таблицу.
 
-## Статус
+## Что реализовано
 
-Добавлены загрузчик официальных sample-архивов и инструмент исследования
-JSON-схемы.
+- загрузка официального high-level sample с проверкой SHA-256;
+- исследование полей и типов JSON на выборке;
+- преобразование данных по явной схеме PySpark;
+- проверки MBID, вероятностей и дубликатов;
+- staging-слой и идемпотентная публикация в ClickHouse;
+- подробная и агрегированные аналитические витрины;
+- воспроизводимое окружение Docker Compose.
 
-## Загрузка данных
+## Запуск
 
-Оба sample-архива (около 2,1 ГБ):
+Требуется Docker с поддержкой Compose. При необходимости скопируйте
+`.env.example` в `.env` и замените демонстрационный пароль ClickHouse.
 
-```powershell
-python src/download_data.py
+Соберите ETL-образ и запустите ClickHouse:
+
+```bash
+docker compose build etl
+docker compose up -d clickhouse
 ```
 
-Только меньший high-level архив:
+Скачайте и распакуйте официальный high-level sample:
 
-```powershell
-python src/download_data.py --dataset highlevel
+```bash
+docker compose run --rm etl python src/download_data.py
+docker compose run --rm etl sh -c "mkdir -p data/raw/highlevel && tar --use-compress-program=unzstd -xf data/raw/archives/acousticbrainz-highlevel-sample-json-20220623-0.tar.zst -C data/raw/highlevel"
 ```
 
-Файлы сохраняются в `data/raw/archives`. Загрузчик проверяет официальные
-SHA256-суммы, пишет сначала во временный `.part` и не скачивает повторно уже
-проверенный архив.
+Обработайте данные и загрузите их в staging. Для быстрой проверки можно
+ограничить число документов параметром `--limit`:
 
-## Проверка схемы JSON
-
-```powershell
-python src/schema_inspector.py path/to/json/files --limit 100
+```bash
+docker compose run --rm etl python src/transform_highlevel.py \
+  --input data/raw/highlevel \
+  --limit 1000 \
+  --show 0 \
+  --write-clickhouse \
+  --load-id sample-1000
 ```
 
-Обязательные поля можно проверить параметром `--required`:
+Опубликуйте проверенную загрузку:
 
-```powershell
-python src/schema_inspector.py data/raw/lowlevel `
-  --required metadata `
-  --required rhythm.bpm `
-  --required tonal.key_key
+```bash
+docker compose run --rm etl python src/publish_staging.py sample-1000
 ```
 
-Подробности доступны через `python src/schema_inspector.py --help`.
+Повторная публикация того же `load_id` безопасно пропускается. Для новой
+загрузки задайте новый идентификатор.
 
-## High-level PySpark-трансформация
+Остановить сервисы можно командой:
 
-Установить зависимости:
-
-```powershell
-python -m pip install -r requirements.txt
-```
-
-Запустить трансформацию на извлечённой выборке:
-
-```powershell
-python src/transform_highlevel.py
-```
-
-Скрипт использует явную схему, приводит вложенный JSON к плоской таблице,
-проверяет MBID, нормализует вероятности и останавливается при обнаружении
-дубликатов. Без `--write-clickhouse` результат только выводится в консоль.
-
-Инструкция полного запуска появится после подготовки Docker Compose и первого сквозного ETL-процесса.
-
-## Docker Compose
-
-Скопировать `.env.example` в `.env` и заменить демонстрационные пароли. Затем:
-
-```powershell
-docker compose build
-docker compose up airflow-init
-docker compose up -d
-docker compose ps
-```
-
-Сервисы:
-
-- Airflow: <http://localhost:8080>;
-- ClickHouse HTTP: <http://localhost:8123>;
-- ClickHouse native protocol: `localhost:9000`.
-
-Проверка PySpark внутри Airflow-образа:
-
-```powershell
-docker compose exec airflow-scheduler `
-  python /opt/airflow/src/transform_highlevel.py --limit 10 --show 0
-```
-
-Запись результата в staging ClickHouse:
-
-```powershell
-docker compose exec airflow-scheduler `
-  python /opt/airflow/src/transform_highlevel.py `
-  --limit 100 `
-  --show 0 `
-  --write-clickhouse `
-  --dag-run-id manual-test
-```
-
-Публикация проверенного запуска в таблицу для Power BI:
-
-```powershell
-python src/publish_staging.py manual-test
-```
-
-Повторная публикация того же `dag_run_id` безопасно пропускается.
-
-Остановка:
-
-```powershell
+```bash
 docker compose down
 ```
 
-Данные Postgres и ClickHouse находятся в именованных Docker volumes и при
-обычном `down` не удаляются.
+## Подключение Power BI
+
+После запуска ClickHouse доступен на `localhost:8123`, база — `music`. Для
+отчёта используются представления `v_recording_overview`, `v_genre_summary` и
+`v_data_quality_summary`. Значения ключевых показателей следует сверить с
+запросами к тем же представлениям перед экспортом отчёта.
+
+Файлы `.pbix` и `.pbit` можно хранить в каталоге `powerbi/`. Для просмотра без
+Power BI Desktop добавьте в `docs/` скриншот и PDF-экспорт отчёта.
+
+## Ограничения
+
+- sample AcousticBrainz не является репрезентативной выборкой всей музыки;
+- probability отражает уверенность модели классификации;
+- порог низкой уверенности `0.5` выбран для демонстрационного анализа;
+- источник статичен, поэтому запуск выполняется вручную.
