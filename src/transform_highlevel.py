@@ -103,6 +103,7 @@ def transform_highlevel(raw: DataFrame) -> DataFrame:
     ).cast("int")
     recording_mbid = F.coalesce(first_tag("musicbrainz_recordingid"), mbid_from_filename)
     date = first_tag("date")
+    release_year = F.regexp_extract(date, r"^(\d{4})", 1)
 
     transformed = raw.select(
         submission_offset.alias("_submission_offset"),
@@ -110,7 +111,9 @@ def transform_highlevel(raw: DataFrame) -> DataFrame:
         first_tag("artist").alias("artist"),
         first_tag("title").alias("title"),
         first_tag("album").alias("album"),
-        F.regexp_extract(date, r"^(\d{4})", 1).cast("int").alias("release_year"),
+        F.when(release_year != "", release_year.cast("int")).alias(
+            "release_year"
+        ),
         F.col("metadata.audio_properties.length")
         .cast("float")
         .alias("duration_seconds"),
@@ -248,12 +251,20 @@ def write_to_clickhouse(
 def read_highlevel(
     spark: SparkSession, input_path: Path, limit: int = 0
 ) -> DataFrame:
-    files = sorted(str(path.resolve()) for path in input_path.rglob("*.json"))
     if limit:
-        files = files[:limit]
-    if not files:
-        raise ValueError(f"No JSON files found under {input_path}")
-    return spark.read.schema(acousticbrainz_highlevel_schema()).json(files)
+        files = sorted(
+            str(path.resolve()) for path in input_path.rglob("*.json")
+        )[:limit]
+        if not files:
+            raise ValueError(f"No JSON files found under {input_path}")
+        return spark.read.schema(acousticbrainz_highlevel_schema()).json(files)
+
+    return (
+        spark.read.option("recursiveFileLookup", "true")
+        .option("pathGlobFilter", "*.json")
+        .schema(acousticbrainz_highlevel_schema())
+        .json(str(input_path.resolve()))
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -310,6 +321,7 @@ def main(argv: list[str] | None = None) -> int:
         .master(args.master)
         .config("spark.sql.session.timeZone", "UTC")
         .config("spark.sql.shuffle.partitions", "4")
+        .config("spark.sql.files.maxPartitionNum", "256")
         .config("spark.ui.enabled", "false")
     )
     if args.write_clickhouse:
@@ -325,10 +337,11 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         raw = read_highlevel(spark, args.input, args.limit)
+        input_file_count = len(raw.inputFiles())
         transformed = transform_highlevel(raw).cache()
         valid_count = validate_transformed(transformed)
 
-        print(f"Raw documents: {raw.count()}")
+        print(f"Input JSON files: {input_file_count}")
         print(f"Valid unique recordings: {valid_count}")
         transformed.printSchema()
         if args.show:
